@@ -1,29 +1,22 @@
 # src/main.py
 
-import yaml
-from .word_optimizer import WordDocumentOptimizer
-from .utils import find_documents
+import json
+from src.word_optimizer import WordDocumentOptimizer  # Updated to absolute import
+from src.utils import find_documents
 import os  # Added for path handling
-
-# src/main.py (modified line 18-20)
-script_dir = os.path.dirname(os.path.abspath(__file__))
-config_path = os.path.join(script_dir, '..', 'config.yaml')
-print(f"Looking for config at: {config_path}")  # Debug line
-with open(config_path, 'r') as f:
-    config = yaml.safe_load(f)
 
 def main():
     # Calculate project root: parent of src/
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(script_dir, '..', 'config.yaml')  # Changed to go up one level
+    config_path = os.path.join(script_dir, '..', 'config.json')
     
     with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
+        config = json.load(f)
     
     input_dir = config['directories']['input']
     
     # Example: Use Word optimizer
-    optimizer = WordDocumentOptimizer()  # Will use dynamic path internally
+    optimizer = WordDocumentOptimizer()
     files = find_documents(input_dir, optimizer.file_extension)
     
     for file_path in files:
