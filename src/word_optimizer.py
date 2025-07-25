@@ -45,6 +45,27 @@ class WordDocumentOptimizer(BaseDocumentOptimizer):
 
         return chunks
 
+    def extract_removed(self, content: Document) -> List[str]:
+        """
+        Extracts removed sections: headers and footers as chunks.
+        """
+        removed_chunks = []
+
+        # Extract headers and footers from sections
+        for section in content.sections:
+            # Headers
+            for paragraph in section.header.paragraphs:
+                text = paragraph.text.strip()
+                if text:
+                    removed_chunks.append(text)
+            # Footers
+            for paragraph in section.footer.paragraphs:
+                text = paragraph.text.strip()
+                if text:
+                    removed_chunks.append(text)
+
+        return removed_chunks
+
     def _table_to_markdown(self, table) -> str:
         """
         Converts a table to markdown format.
