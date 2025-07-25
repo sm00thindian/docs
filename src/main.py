@@ -1,4 +1,3 @@
-# src/main.py
 import json
 from src.word_optimizer import WordDocumentOptimizer
 from src.utils import find_documents
@@ -13,9 +12,10 @@ def main():
     print(f"Absolute config path: {absolute_path}")
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Config file not found at: {config_path}")
-    
     with open(config_path, 'r') as f:
-        config = json.load(f)
+        content = f.read()
+        print(f"Config content: {content}")  # Debug content
+        config = json.load(io.StringIO(content))  # Use StringIO to re-parse
     
     input_dir = config['directories']['input']
     
