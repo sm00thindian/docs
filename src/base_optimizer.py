@@ -3,15 +3,20 @@
 from abc import ABC, abstractmethod
 from typing import List, Any
 import yaml
+import os  # Added for path handling
 
 class BaseDocumentOptimizer(ABC):
     """
     Base class for document optimizers. Subclasses implement document-type-specific loading.
     """
-    def __init__(self, config_path: str = "../../config.yaml"):
+    def __init__(self, config_path: str = None):
         """
-        Initializes with config from YAML file.
+        Initializes with config from YAML file. Uses dynamic path if not provided.
         """
+        if config_path is None:
+            # Calculate project root: parent of src/
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            config_path = os.path.join(script_dir, '..', '..', 'config.yaml')
         self.config = self._load_config(config_path)
         self.file_extension = None  # Set by subclasses or config
         self.chunk_size = None
