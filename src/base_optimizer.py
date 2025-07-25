@@ -2,8 +2,8 @@
 
 from abc import ABC, abstractmethod
 from typing import List, Any
-import yaml
-import os  # Added for path handling
+import json
+import os
 
 class BaseDocumentOptimizer(ABC):
     """
@@ -11,12 +11,12 @@ class BaseDocumentOptimizer(ABC):
     """
     def __init__(self, config_path: str = None):
         """
-        Initializes with config from YAML file. Uses dynamic path if not provided.
+        Initializes with config from JSON file. Uses dynamic path if not provided.
         """
         if config_path is None:
             # Calculate project root: parent of src/
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            config_path = os.path.join(script_dir, '..', '..', 'config.yaml')
+            config_path = os.path.join(script_dir, '..', '..', 'config.json')
         self.config = self._load_config(config_path)
         self.file_extension = None  # Set by subclasses or config
         self.chunk_size = None
@@ -24,7 +24,7 @@ class BaseDocumentOptimizer(ABC):
 
     def _load_config(self, config_path: str) -> dict:
         with open(config_path, 'r') as f:
-            return yaml.safe_load(f)
+            return json.load(f)
 
     @abstractmethod
     def load_document(self, file_path: str) -> Any:
