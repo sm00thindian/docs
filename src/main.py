@@ -30,15 +30,16 @@ def main():
     for file_path in files:
         print(f"Processing {file_path}")
         content = optimizer.load_document(file_path)
+        if content is None:
+            continue
         chunks = optimizer.optimize(content)
         print(f"Optimized into {len(chunks)} chunks.")
         
-        # Save optimized chunks to output dir
-        for i, chunk in enumerate(chunks, 1):
-            chunk_file = os.path.join(output_dir, f"{os.path.basename(file_path)}_chunk_{i}.txt")
-            with open(chunk_file, 'w') as cf:
-                cf.write(chunk)
-        print(f"Chunks saved to {output_dir}")
+        # Save optimized chunks as JSON with metadata
+        chunks_file = os.path.join(output_dir, f"{os.path.basename(file_path)}_chunks.json")
+        with open(chunks_file, 'w') as cf:
+            json.dump(chunks, cf, indent=4)
+        print(f"Chunks saved to {chunks_file}")
 
         # Extract and save removed sections
         removed_chunks = optimizer.extract_removed(content)
