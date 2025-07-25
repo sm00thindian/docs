@@ -1,0 +1,14 @@
+## config.json
+{
+  "document_types": {
+    "word": {
+      "extension": ".docx",
+      "chunk_size": 512,
+      "chunk_overlap": 50
+    }
+  },
+  "directories": {
+    "input": "./sample_docs",
+    "output": "./optimized_chunks"
+  }
+}
