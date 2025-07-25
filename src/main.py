@@ -1,21 +1,24 @@
 # src/main.py
-
 import json
-from src.word_optimizer import WordDocumentOptimizer  # Updated to absolute import
+from src.word_optimizer import WordDocumentOptimizer
 from src.utils import find_documents
-import os  # Added for path handling
+import os
 
 def main():
-    # Calculate project root: parent of src/
     script_dir = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(script_dir, '..', 'config.json')
+    absolute_path = os.path.abspath(config_path)
+    print(f"Script dir: {script_dir}")
+    print(f"Config path (joined): {config_path}")
+    print(f"Absolute config path: {absolute_path}")
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Config file not found at: {config_path}")
     
     with open(config_path, 'r') as f:
         config = json.load(f)
     
     input_dir = config['directories']['input']
     
-    # Example: Use Word optimizer
     optimizer = WordDocumentOptimizer()
     files = find_documents(input_dir, optimizer.file_extension)
     
@@ -24,7 +27,6 @@ def main():
         content = optimizer.load_document(file_path)
         chunks = optimizer.optimize(content)
         print(f"Optimized into {len(chunks)} chunks.")
-        # Optionally save chunks to output dir, e.g., write to files
-    
+
 if __name__ == "__main__":
     main()
