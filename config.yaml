@@ -1,5 +1,3 @@
-## config.yaml
-```yaml
 # Default configuration for RAG Document Optimizer
 
 document_types:
