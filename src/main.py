@@ -1,3 +1,4 @@
+# src/main.py
 import json
 from src.word_optimizer import WordDocumentOptimizer
 from src.utils import find_documents
