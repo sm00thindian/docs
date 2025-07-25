@@ -3,15 +3,20 @@
 import yaml
 from .word_optimizer import WordDocumentOptimizer
 from .utils import find_documents
+import os  # Added for path handling
 
 def main():
-    with open("../../config.yaml", 'r') as f:
+    # Calculate project root: parent of src/
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_dir, '..', '..', 'config.yaml')
+    
+    with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
     
     input_dir = config['directories']['input']
     
     # Example: Use Word optimizer
-    optimizer = WordDocumentOptimizer()
+    optimizer = WordDocumentOptimizer()  # Will use dynamic path internally
     files = find_documents(input_dir, optimizer.file_extension)
     
     for file_path in files:
