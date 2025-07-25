@@ -18,6 +18,8 @@ def main():
         config = json.load(f)
     
     input_dir = config['directories']['input']
+    output_dir = config['directories']['output']
+    os.makedirs(output_dir, exist_ok=True)
     
     # Example: Use Word optimizer
     optimizer = WordDocumentOptimizer()
@@ -28,7 +30,13 @@ def main():
         content = optimizer.load_document(file_path)
         chunks = optimizer.optimize(content)
         print(f"Optimized into {len(chunks)} chunks.")
-        # Optionally save chunks to output dir, e.g., write to files
-    
+        
+        # Save chunks to output dir
+        for i, chunk in enumerate(chunks, 1):
+            chunk_file = os.path.join(output_dir, f"{os.path.basename(file_path)}_chunk_{i}.txt")
+            with open(chunk_file, 'w') as cf:
+                cf.write(chunk)
+        print(f"Chunks saved to {output_dir}")
+
 if __name__ == "__main__":
     main()
