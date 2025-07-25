@@ -5,6 +5,7 @@ from .word_optimizer import WordDocumentOptimizer
 from .utils import find_documents
 import os  # Added for path handling
 
+# src/main.py (modified line 18-20)
 script_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(script_dir, '..', 'config.yaml')
 print(f"Looking for config at: {config_path}")  # Debug line
