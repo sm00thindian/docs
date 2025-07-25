@@ -2,7 +2,8 @@
 
 from .base_optimizer import BaseDocumentOptimizer
 from docx import Document
-from typing import Any, List
+from typing import Any, List, Dict
+import re  # For advanced cleaning
 
 class WordDocumentOptimizer(BaseDocumentOptimizer):
     """
@@ -16,32 +17,67 @@ class WordDocumentOptimizer(BaseDocumentOptimizer):
         self.chunk_overlap = doc_config['chunk_overlap']
 
     def load_document(self, file_path: str) -> Document:
-        return Document(file_path)
+        try:
+            return Document(file_path)
+        except Exception as e:
+            print(f"Error loading {file_path}: {e}")
+            return None
 
-    def _extract_text(self, content: Document) -> str:
-        # This method is overridden in optimize, but kept for compatibility
-        return ''
+    def extract_metadata(self, content: Document) -> Dict:
+        """
+        Extracts metadata from the document.
+        """
+        core_props = content.core_properties
+        metadata = {
+            'title': core_props.title,
+            'author': core_props.author,
+            'created': str(core_props.created),
+            'modified': str(core_props.modified),
+            'keywords': core_props.keywords
+        }
+        return metadata
 
-    def optimize(self, content: Document) -> List[str]:
+    def optimize(self, content: Document) -> List[Dict]:
         """
-        Optimizes the document: removes headers/footers, extracts paragraphs and tables as chunks.
+        Optimizes the document: extracts metadata, removes headers/footers, hierarchical chunking based on headings, paragraphs, and tables.
         """
+        if content is None:
+            return []
+
+        metadata = self.extract_metadata(content)
         chunks = []
+        current_heading = "No Heading"
+        current_section_chunks = []
 
-        # Extract paragraphs from body (excluding headers/footers)
+        # Extract paragraphs with heading hierarchy
         for paragraph in content.paragraphs:
-            text = paragraph.text.strip()
-            if text:
-                chunks.append(text)
+            if paragraph.style.name.startswith('Heading'):
+                if current_section_chunks:
+                    chunks.append({
+                        'text': '\n'.join(current_section_chunks),
+                        'metadata': {**metadata, 'heading': current_heading, 'type': 'section'}
+                    })
+                    current_section_chunks = []
+                current_heading = paragraph.text.strip()
+            else:
+                text = paragraph.text.strip()
+                if text:
+                    current_section_chunks.append(self._clean_text(text))
 
-        # Extract tables as markdown chunks
+        if current_section_chunks:
+            chunks.append({
+                'text': '\n'.join(current_section_chunks),
+                'metadata': {**metadata, 'heading': current_heading, 'type': 'section'}
+            })
+
+        # Extract tables as separate chunks
         for table in content.tables:
             table_chunk = self._table_to_markdown(table)
             if table_chunk:
-                chunks.append(table_chunk)
-
-        # Optional: Clean each chunk
-        chunks = [self._clean_text(chunk) for chunk in chunks]
+                chunks.append({
+                    'text': table_chunk,
+                    'metadata': {**metadata, 'type': 'table'}
+                })
 
         return chunks
 
@@ -84,7 +120,9 @@ class WordDocumentOptimizer(BaseDocumentOptimizer):
         return '\n'.join(markdown)
 
     def _clean_text(self, text: str) -> str:
+        # Enhanced cleaning: remove special characters, normalize
         text = super()._clean_text(text)
+        text = re.sub(r'[^a-zA-Z0-9\s]', '', text).lower()  # Remove punctuation, lowercase
         lines = text.split('\n')
         cleaned_lines = [line for line in lines if line.strip() and len(line.strip()) > 5]
         return '\n'.join(cleaned_lines)
