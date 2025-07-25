@@ -9,7 +9,7 @@ class WordDocumentOptimizer(BaseDocumentOptimizer):
     Optimizer for Microsoft Word (.docx) documents.
     """
     def __init__(self, config_path: str = None):
-        super().__init__(config_path)  # Pass None to use dynamic path
+        super().__init__(config_path)
         doc_config = self.config['document_types']['word']
         self.file_extension = doc_config['extension']
         self.chunk_size = doc_config['chunk_size']
