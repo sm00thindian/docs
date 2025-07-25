@@ -19,7 +19,9 @@ def main():
     
     input_dir = config['directories']['input']
     output_dir = config['directories']['output']
+    removed_dir = config['directories']['removed']
     os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(removed_dir, exist_ok=True)
     
     # Example: Use Word optimizer
     optimizer = WordDocumentOptimizer()
@@ -31,12 +33,23 @@ def main():
         chunks = optimizer.optimize(content)
         print(f"Optimized into {len(chunks)} chunks.")
         
-        # Save chunks to output dir
+        # Save optimized chunks to output dir
         for i, chunk in enumerate(chunks, 1):
             chunk_file = os.path.join(output_dir, f"{os.path.basename(file_path)}_chunk_{i}.txt")
             with open(chunk_file, 'w') as cf:
                 cf.write(chunk)
         print(f"Chunks saved to {output_dir}")
+
+        # Extract and save removed sections
+        removed_chunks = optimizer.extract_removed(content)
+        if removed_chunks:
+            for i, chunk in enumerate(removed_chunks, 1):
+                removed_file = os.path.join(removed_dir, f"{os.path.basename(file_path)}_removed_{i}.txt")
+                with open(removed_file, 'w') as rf:
+                    rf.write(chunk)
+            print(f"Removed sections saved to {removed_dir}")
+        else:
+            print(f"No removed sections for {file_path}")
 
 if __name__ == "__main__":
     main()
