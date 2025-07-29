@@ -1,11 +1,11 @@
-def load_document(self, file_path: str) -> Document:
+def load_document(self, file_path: str) -> 'Document':
     try:
         return Document(file_path)
     except Exception as e:
         print(f"Error loading {file_path}: {e}")
         return None
 
-def extract_metadata(self, content: Document) -> Dict:
+def extract_metadata(self, content: 'Document') -> 'dict':
     """
     Extracts metadata from the document.
     """
@@ -19,7 +19,7 @@ def extract_metadata(self, content: Document) -> Dict:
     }
     return metadata
 
-def optimize(self, content: Document) -> List[Dict]:
+def optimize(self, content: 'Document') -> 'list[dict]':
     """
     Optimizes the document: extracts metadata, removes headers/footers, hierarchical chunking based on headings, paragraphs, and tables.
     """
@@ -63,7 +63,7 @@ def optimize(self, content: Document) -> List[Dict]:
 
     return chunks
 
-def extract_removed(self, content: Document) -> List[str]:
+def extract_removed(self, content: 'Document') -> 'list[str]':
     """
     Extracts removed sections: headers and footers as chunks.
     """
@@ -109,7 +109,7 @@ def _clean_text(self, text: str) -> str:
     cleaned_lines = [line for line in lines if line.strip() and len(line.strip()) > 5]
     return '\n'.join(cleaned_lines)
 
-def _extract_text(self, content: Document) -> str:
+def _extract_text(self, content: 'Document') -> str:
     """
     Extracts plain text from the document content.
     Note: This method is implemented to satisfy the abstract base class requirement,
