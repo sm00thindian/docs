@@ -15,4 +15,5 @@ pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pyt
 echo "Virtual environment activated and dependencies installed."
 echo "To deactivate: deactivate"
 echo "To run:"
+echo "source venv/bin/activate"
 echo "python src/pipeline.py --input_dir path/to/docs --output_dir output/"
