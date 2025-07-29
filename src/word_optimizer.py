@@ -1,11 +1,11 @@
-def load_document(self, file_path: str) -> 'Document':
+def load_document(self, file_path):
     try:
         return Document(file_path)
     except Exception as e:
         print(f"Error loading {file_path}: {e}")
         return None
 
-def extract_metadata(self, content: 'Document') -> 'dict':
+def extract_metadata(self, content):
     """
     Extracts metadata from the document.
     """
@@ -19,7 +19,7 @@ def extract_metadata(self, content: 'Document') -> 'dict':
     }
     return metadata
 
-def optimize(self, content: 'Document') -> 'list[dict]':
+def optimize(self, content):
     """
     Optimizes the document: extracts metadata, removes headers/footers, hierarchical chunking based on headings, paragraphs, and tables.
     """
@@ -63,7 +63,7 @@ def optimize(self, content: 'Document') -> 'list[dict]':
 
     return chunks
 
-def extract_removed(self, content: 'Document') -> 'list[str]':
+def extract_removed(self, content):
     """
     Extracts removed sections: headers and footers as chunks.
     """
@@ -84,7 +84,7 @@ def extract_removed(self, content: 'Document') -> 'list[str]':
 
     return removed_chunks
 
-def _table_to_markdown(self, table) -> str:
+def _table_to_markdown(self, table):
     """
     Converts a table to markdown format.
     """
@@ -101,7 +101,7 @@ def _table_to_markdown(self, table) -> str:
 
     return '\n'.join(markdown)
 
-def _clean_text(self, text: str) -> str:
+def _clean_text(self, text):
     # Enhanced cleaning: remove special characters, normalize
     text = super()._clean_text(text)
     text = re.sub(r'[^a-zA-Z0-9\s]', '', text).lower()  # Remove punctuation, lowercase
@@ -109,7 +109,7 @@ def _clean_text(self, text: str) -> str:
     cleaned_lines = [line for line in lines if line.strip() and len(line.strip()) > 5]
     return '\n'.join(cleaned_lines)
 
-def _extract_text(self, content: 'Document') -> str:
+def _extract_text(self, content):
     """
     Extracts plain text from the document content.
     Note: This method is implemented to satisfy the abstract base class requirement,
