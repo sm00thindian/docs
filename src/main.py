@@ -1,13 +1,14 @@
 # src/main.py
 
-import json
-from src.word_optimizer import WordDocumentOptimizer  # Absolute import
-from src.utils import find_documents
-import os  # Added for path handling
+import os  # For path handling
 import sys
+import json
 
 # Add project root to sys.path for absolute imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.word_optimizer import WordDocumentOptimizer
+from src.utils import find_documents
 
 def main():
     # Calculate project root: parent of src/
