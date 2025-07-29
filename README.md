@@ -7,7 +7,9 @@ The project is structured as a Python package suitable for a GitHub repository. 
 
 docs/ 
 ├── README.md              # Project documentation 
-├── requirements.txt       # Dependencies ├── setup.py               # For installing as a package (optional, for future use) ├── src/ 
+├── requirements.txt       # Dependencies 
+├── setup.py               # For installing as a package (optional, for future use) 
+├── src/ 
 │   ├── init.py        # Makes src a package 
 │   ├── ingestion.py       # Handles document loading 
 │   ├── cleaning.py        # Handles text cleaning 
@@ -16,7 +18,8 @@ docs/
 │   ├── pipeline.py        # Orchestrates the full process 
 │   └── utils.py           # Utility functions (e.g., file handling) 
 ├── tests/ 
-│   ├── init.py │   
+│   ├── init.py 
+│   
 ├── test_ingestion.py  # Unit tests for ingestion 
 │   ├── test_cleaning.py   # Unit tests for cleaning 
 │   ├── test_chunking.py   # Unit tests for chunking 
