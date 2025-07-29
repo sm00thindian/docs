@@ -13,6 +13,9 @@ pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pyt
 export SSL_CERT_FILE=$(python -m certifi)
 
 python -c "import nltk; nltk.download('punkt');nltk.download('stopwords');nltk.download('punkt_tab')"
+
+python -m spacy download en_core_web_sm
+
 # Print confirmation
 echo "Virtual environment activated and dependencies installed."
 echo "To deactivate: deactivate"
