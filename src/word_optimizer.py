@@ -1,4 +1,3 @@
-#this is a test
 def load_document(self, file_path: str) -> Document:
     try:
         return Document(file_path)
