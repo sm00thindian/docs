@@ -4,7 +4,8 @@
 if [ ! -d "venv" ]; then
     python3 -m venv venv
 fi
-
+mkdir -p examples
+mkdir -p output
 # Activate the virtual environment
 source venv/bin/activate
 
