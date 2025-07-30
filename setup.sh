@@ -9,12 +9,13 @@ fi
 source venv/bin/activate
 
 # Install dependencies
-pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org --quiet
-export SSL_CERT_FILE=$(python -m certifi)
+pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org
 
 python -c "import nltk; nltk.download('punkt');nltk.download('stopwords');nltk.download('punkt_tab')"
 
 python -m spacy download en_core_web_sm
+echo "python src/pipeline.py --input_dir path/to/docs --output_dir output/"
+bash export SSL_CERT_FILE=$(python -m certifi)
 
 # Print confirmation
 echo "Virtual environment activated and dependencies installed."
