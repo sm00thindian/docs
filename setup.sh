@@ -10,7 +10,7 @@ mkdir -p output
 source venv/bin/activate
 
 # Install dependencies
-pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org
+pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org --quiet
 
 python -c "import nltk; nltk.download('punkt');nltk.download('stopwords');nltk.download('punkt_tab')"
 
