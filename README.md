@@ -8,26 +8,26 @@ The project is structured as a Python package suitable for a GitHub repository. 
 docs/ <br>
 ├── README.md              # Project documentation <br>
 ├── requirements.txt       # Dependencies <br>
-├── setup.py               # For installing as a package (optional, for future use) 
-├── src/ 
-│   ├── init.py        # Makes src a package 
-│   ├── ingestion.py       # Handles document loading 
-│   ├── cleaning.py        # Handles text cleaning 
-│   ├── chunking.py        # Handles chunking with overlap 
-│   ├── tagging.py         # Handles tagging/metadata addition 
-│   ├── pipeline.py        # Orchestrates the full process 
-│   └── utils.py           # Utility functions (e.g., file handling) 
-├── tests/ 
-│   ├── init.py 
-│   
-├── test_ingestion.py  # Unit tests for ingestion 
-│   ├── test_cleaning.py   # Unit tests for cleaning 
-│   ├── test_chunking.py   # Unit tests for chunking 
-│   ├── test_tagging.py    # Unit tests for tagging 
-│   └── test_pipeline.py   # Integration tests 
-├── examples/ 
-│   └── sample_policy.docx # Sample input file (not included here; add your own) 
-└── output/                # Directory for processed outputs (created at runtime)
+├── setup.py               # For installing as a package (optional, for future use)  <br>
+├── src/  <br>
+│   ├── init.py        # Makes src a package  <br>
+│   ├── ingestion.py       # Handles document loading  <br>
+│   ├── cleaning.py        # Handles text cleaning  <br>
+│   ├── chunking.py        # Handles chunking with overlap <br> 
+│   ├── tagging.py         # Handles tagging/metadata addition  <br>
+│   ├── pipeline.py        # Orchestrates the full process  <br>
+│   └── utils.py           # Utility functions (e.g., file handling)  <br>
+├── tests/  <br>
+│   ├── init.py  <br>
+│    <br>
+├── test_ingestion.py  # Unit tests for ingestion  <br>
+│   ├── test_cleaning.py   # Unit tests for cleaning  <br>
+│   ├── test_chunking.py   # Unit tests for chunking  <br>
+│   ├── test_tagging.py    # Unit tests for tagging  <br>
+│   └── test_pipeline.py   # Integration tests  <br>
+├── examples/  <br>
+│   └── sample_policy.docx # Sample input file (not included here; add your own)  <br>
+└── output/                # Directory for processed outputs (created at runtime) <br>
 
 ## Design Principles
 - **Modularity**: Each step (ingestion, cleaning, chunking, tagging) is in its own module with extensible classes/functions. For example, ingestion uses a base `DocumentIngester` class that can be subclassed for new file types.
