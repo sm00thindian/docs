@@ -8,14 +8,15 @@ from tagging import TextTagger
 from utils import get_files_with_extension
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
 
 def process_document(file_path: str, output_dir: str, chunk_size: int, overlap: int, to_pdf: bool) -> None:
     """Full pipeline for a single document."""
     file_name = os.path.basename(file_path)
     
     # Step 1: Ingestion
-    ingester = WordDocumentIngester()  # Easy to swap for other ingesters
+    ingester = WordDocumentIngester()
     raw_text = ingester.ingest(file_path)
     
     # Step 2: Cleaning
@@ -46,33 +47,39 @@ def process_document(file_path: str, output_dir: str, chunk_size: int, overlap: 
     # Future: Add more steps here (e.g., embedding)
 
 def json_to_pdf(json_file: str, pdf_file: str) -> None:
-    """Convert a JSON file with tagged chunks to a PDF."""
+    """Convert a JSON file to a PDF formatted like pretty JSON."""
     # Load JSON data
     with open(json_file, 'r', encoding='utf-8') as f:
-        chunks = json.load(f)
+        json_data = json.load(f)
+    
+    # Convert JSON to pretty-printed string
+    pretty_json = json.dumps(json_data, indent=4, ensure_ascii=False)
     
     # Set up PDF document
     doc = SimpleDocTemplate(pdf_file, pagesize=letter)
     styles = getSampleStyleSheet()
-    story = []
     
-    # Add title
-    story.append(Paragraph(f"Document Analysis: {chunks[0]['file_name']}", styles['Title']))
+    # Define a monospaced style for JSON-like formatting
+    json_style = ParagraphStyle(
+        name='JsonStyle',
+        fontName='Courier',  # Monospaced font for code-like appearance
+        fontSize=10,
+        leading=12,  # Line spacing to match JSON indentation
+        textColor=colors.black,
+        spaceBefore=6,
+        spaceAfter=6
+    )
+    
+    # Split JSON string into lines to handle long content
+    story = []
+    story.append(Paragraph(f"JSON Output: {os.path.basename(json_file)}", styles['Title']))
     story.append(Spacer(1, 12))
     
-    # Add each chunk
-    for chunk in chunks:
-        story.append(Paragraph(f"Chunk {chunk['chunk_id']}", styles['Heading2']))
-        story.append(Paragraph(f"Content: {chunk['content']}", styles['BodyText']))
-        story.append(Paragraph(f"Word Count: {chunk['word_count']}", styles['BodyText']))
-        story.append(Paragraph(f"Keywords: {', '.join(chunk['keywords'])}", styles['BodyText']))
-        story.append(Paragraph(f"Entities: {', '.join([f'{ent[0]} ({ent[1]})' for ent in chunk['entities']])}", styles['BodyText']))
-        story.append(Paragraph(f"Policy Keywords: {', '.join(chunk['policy_keywords'])}", styles['BodyText']))
-        story.append(Paragraph(f"Intents: {', '.join(chunk['intents'])}", styles['BodyText']))
-        story.append(Paragraph(f"Chunk Position: {chunk['chunk_position']:.2f}", styles['BodyText']))
-        if 'error' in chunk:
-            story.append(Paragraph(f"Error: {chunk['error']}", styles['BodyText']))
-        story.append(Spacer(1, 12))
+    # Add each line of the pretty JSON as a Paragraph
+    for line in pretty_json.splitlines():
+        # Replace spaces with non-breaking spaces for consistent indentation
+        formatted_line = line.replace(' ', '&nbsp;')
+        story.append(Paragraph(formatted_line, json_style))
     
     # Build PDF
     doc.build(story)
@@ -83,7 +90,7 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", default="output", help="Output directory")
     parser.add_argument("--chunk_size", type=int, default=500, help="Chunk size in words")
     parser.add_argument("--overlap", type=int, default=100, help="Overlap in words")
-    parser.add_argument("--to_pdf", action="store_true", help="Convert JSON outputs to PDF")
+    parser.add_argument("--to_pdf", action="store_true", help="Convert JSON outputs to PDF with pretty JSON formatting")
     
     args = parser.parse_args()
     
