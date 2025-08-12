@@ -1,4 +1,4 @@
-# DOCS (Document Optimization and Chunking System)
+# DOCS (Document Optimization for Conversational System)
 
 This is a Python-based project for optimizing documents in a Retrieval-Augmented Generation (RAG) system, specifically for a policy chatbot. The project is designed to handle file ingestion, cleaning, chunking with overlap, and tagging. It focuses on Word documents (.docx) initially but is built modularly to allow easy extension to other document types (e.g., PDF, TXT) in the future.
 
