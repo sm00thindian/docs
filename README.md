@@ -46,7 +46,7 @@ docs/
 ## Installation
 1. Clone the repo: `git clone https://github.com/sm00thindian/docs.git`
 2. Install dependencies: `pip install -r requirements.txt`
-3. Run the pipeline: `python src/pipeline.py --input_dir path/to/docs --output_dir output/`
+3. Run the pipeline: `python src/pipeline.py --input_dir path/to/docs --output_dir output/ [--output_pdf]`
 
 ## Usage
 - Run the full pipeline from `pipeline.py`.
