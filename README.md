@@ -5,9 +5,9 @@ This is a Python-based project for optimizing documents in a Retrieval-Augmented
 ## Project Structure
 The project is structured as a Python package suitable for a GitHub repository. Here's the layout:
 
-docs/ 
-├── README.md              # Project documentation 
-├── requirements.txt       # Dependencies 
+docs/ <br>
+├── README.md              # Project documentation <br>
+├── requirements.txt       # Dependencies <br>
 ├── setup.py               # For installing as a package (optional, for future use) 
 ├── src/ 
 │   ├── init.py        # Makes src a package 
