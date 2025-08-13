@@ -11,13 +11,13 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-def process_document(file_path: str, output_dir: str, chunk_size: int, overlap: int, to_pdf: bool) -> None:
+def process_document(file_path: str, output_dir: str, chunk_size: int, overlap: int, ocr_images: bool, to_pdf: bool) -> None:
     """Full pipeline for a single document."""
     file_name = os.path.basename(file_path)
     
     # Step 1: Ingestion
     ingester = WordDocumentIngester()
-    raw_text = ingester.ingest(file_path)
+    raw_text = ingester.ingest(file_path, ocr_images=ocr_images)
     
     # Step 2: Cleaning
     cleaner = TextCleaner()
@@ -62,9 +62,9 @@ def json_to_pdf(json_file: str, pdf_file: str) -> None:
     # Define a monospaced style for JSON-like formatting
     json_style = ParagraphStyle(
         name='JsonStyle',
-        fontName='Courier',  # Monospaced font for code-like appearance
+        fontName='Courier',
         fontSize=10,
-        leading=12,  # Line spacing to match JSON indentation
+        leading=12,
         textColor=colors.black,
         spaceBefore=6,
         spaceAfter=6
@@ -77,7 +77,6 @@ def json_to_pdf(json_file: str, pdf_file: str) -> None:
     
     # Add each line of the pretty JSON as a Paragraph
     for line in pretty_json.splitlines():
-        # Replace spaces with non-breaking spaces for consistent indentation
         formatted_line = line.replace(' ', '&nbsp;')
         story.append(Paragraph(formatted_line, json_style))
     
@@ -90,13 +89,13 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", default="output", help="Output directory")
     parser.add_argument("--chunk_size", type=int, default=500, help="Chunk size in words")
     parser.add_argument("--overlap", type=int, default=100, help="Overlap in words")
+    parser.add_argument("--ocr_images", action="store_true", help="Enable OCR on images in .docx files during ingestion")
     parser.add_argument("--to_pdf", action="store_true", help="Convert JSON outputs to PDF with pretty JSON formatting")
     
     args = parser.parse_args()
     
     os.makedirs(args.output_dir, exist_ok=True)
     
-    # Process all .docx files
     docx_files = get_files_with_extension(args.input_dir, '.docx')
     for file_path in docx_files:
-        process_document(file_path, args.output_dir, args.chunk_size, args.overlap, args.to_pdf)
+        process_document(file_path, args.output_dir, args.chunk_size, args.overlap, args.ocr_images, args.to_pdf)
