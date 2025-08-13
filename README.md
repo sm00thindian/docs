@@ -43,11 +43,6 @@ docs/
 - **Error Handling**: Basic try-except blocks; logging for debugging.
 - **Dependencies**: Minimal, listed in `requirements.txt`.
 
-## Installation
-1. Clone the repo: `git clone https://github.com/sm00thindian/docs.git`
-2. Install dependencies: `pip install -r requirements.txt`
-3. Run the pipeline: `python src/pipeline.py --input_dir path/to/docs --output_dir output/ [--output_pdf]`
-
 ## Usage
 - Run the full pipeline from `pipeline.py`.
 - Customize parameters like chunk_size, overlap, etc., via command-line args.
@@ -58,3 +53,14 @@ docs/
 - Add new pipeline steps (e.g., deduplication) by appending to the `process_document` method.
 - Enhance tagging with ML models (e.g., spaCy for NER).
 - Support batch processing for large directories.
+
+## Design Principles
+- **Ingestion**: Supports optional OCR on embedded images in .docx files using `easyocr`. Extracted image text is appended with markers like `[Image Text: ...]`.
+- **Output Format Choice**: Outputs JSON files with tagged chunks. Optional PDF output formats the JSON as pretty-printed JSON (code-like, with indentation) using `reportlab`.
+
+## Installation
+1. Clone the repo: `git clone https://github.com/sm00thindian/docs.git`
+2. Install dependencies: `pip install -r requirements.txt`
+3. Run the pipeline: 
+   ```bash
+   python src/pipeline.py --input_dir path/to/docs --output_dir output/ [--ocr_images] [--to_pdf]
