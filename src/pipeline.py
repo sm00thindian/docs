@@ -49,8 +49,12 @@ def process_document(file_path: str, output_dir: str, chunk_size: int, overlap: 
 def json_to_pdf(json_file: str, pdf_file: str) -> None:
     """Convert a JSON file to a PDF formatted like pretty JSON."""
     # Load JSON data
-    with open(json_file, 'r', encoding='utf-8') as f:
-        json_data = json.load(f)
+    try:
+        with open(json_file, 'r', encoding='utf-8') as f:
+            json_data = json.load(f)
+    except Exception as e:
+        print(f"Error reading JSON file {json_file}: {e}")
+        return
     
     # Convert JSON to pretty-printed string
     pretty_json = json.dumps(json_data, indent=4, ensure_ascii=False)
@@ -81,7 +85,10 @@ def json_to_pdf(json_file: str, pdf_file: str) -> None:
         story.append(Paragraph(formatted_line, json_style))
     
     # Build PDF
-    doc.build(story)
+    try:
+        doc.build(story)
+    except Exception as e:
+        print(f"Error generating PDF {pdf_file}: {e}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="RAG Document Optimizer Pipeline")
@@ -96,6 +103,7 @@ if __name__ == "__main__":
     
     os.makedirs(args.output_dir, exist_ok=True)
     
+    # Process all .docx files
     docx_files = get_files_with_extension(args.input_dir, '.docx')
     for file_path in docx_files:
         process_document(file_path, args.output_dir, args.chunk_size, args.overlap, args.ocr_images, args.to_pdf)
