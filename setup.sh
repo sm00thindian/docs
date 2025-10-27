@@ -1,4 +1,3 @@
-In my ‘DOCS’ project this is the current setup.sh file contents:
 #!/bin/bash
 
 # Create virtual environment if it doesn't exist
@@ -25,4 +24,4 @@ echo "To deactivate: deactivate"
 echo "To run:"
 echo "source venv/bin/activate"
 echo "export SSL_CERT_FILE=$(python -m certifi)"
-echo "python src/pipeline.py --input_dir path/to/docs --output_dir output/"
+echo "python src/pipeline.py --input_dir path/to/docs --output_dir output/  [--ocr_images] [--to_pdf]"
