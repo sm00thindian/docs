@@ -24,7 +24,7 @@ class TextTagger:
         self.stop_words = set(stopwords.words('english'))
         self.POLICY_KEYWORDS = {
             'compliance', 'regulation', 'policy', 'audit', 'governance', 'privacy',
-            'security', 'data protection', 'GDPR', 'HIPAA', 'standard'
+            'security', 'data protection', 'GDPR', 'HIPAA', 'standard', 'SAFR', 'guideline'
         }
         self.INTENT_PATTERNS = {
             'rule': ['must', 'shall', 'required', 'prohibited'],
