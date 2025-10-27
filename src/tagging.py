@@ -17,7 +17,7 @@ class TextTagger:
         nltk.download('punkt', quiet=True)
         nltk.download('stopwords', quiet=True)
         try:
-            self.nlp = spacy.load('en_core_web_sm', disable=['parser'])  # Disable parser for speed
+            self.nlp = spacy.load('en_core_web_lg', disable=['parser'])  # Disable parser for speed
         except Exception as e:
             logging.error(f"Failed to load spaCy model: {e}")
             raise
