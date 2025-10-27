@@ -3,7 +3,7 @@
 This is a Python-based project for optimizing documents in a Retrieval-Augmented Generation (RAG) system, specifically for a policy chatbot. The project is designed to handle file ingestion, cleaning, chunking with overlap, and tagging. It focuses on Word documents (.docx) initially but is built modularly to allow easy extension to other document types (e.g., PDF, TXT) in the future.
 
 ## Project Structure
-The project is structured as a Python package suitable for a GitHub repository. Here's the layout:
+Here's the layout:
 
 docs/ 
 ├── README.md              # Project documentation 
@@ -60,7 +60,7 @@ docs/
 
 ## Installation
 1. Clone the repo: `git clone https://github.com/sm00thindian/docs.git`
-2. Install dependencies: `pip install -r requirements.txt`
-3. Run the pipeline: 
-   ```bash
-   python src/pipeline.py --input_dir path/to/docs --output_dir output/ [--ocr_images] [--to_pdf]
+2. Run the setup: `bash setup.sh`
+3. Activate python environment: `source venv/bin/activate`
+4. Set SSL_CERT_FILE: `export SSL_CERT_FILE=/Users/kilynn/Projects/docs/venv/lib/python3.10/site-packages/certifi/cacert.pem`
+5. Run the pipeline: `bash python src/pipeline.py --input_dir path/to/docs --output_dir output/ [--ocr_images] [--to_pdf]`
