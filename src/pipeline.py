@@ -7,7 +7,7 @@ from functools import partial
 from multiprocessing import Pool, cpu_count
 
 # ----------------------------------------------------------------------
-# 1. NO GLOBAL TAGGER — will be created in each worker
+# 1. Imports — no global TextTagger (created per worker)
 # ----------------------------------------------------------------------
 from ingestion import WordDocumentIngester
 from cleaning import TextCleaner
@@ -21,7 +21,7 @@ from llm_export import (
 )
 
 # ----------------------------------------------------------------------
-# 2. Worker function — creates its own TextTagger
+# 2. Worker function — creates TextTagger inside worker
 # ----------------------------------------------------------------------
 def process_single(
     file_path: str,
@@ -33,6 +33,10 @@ def process_single(
     export_format: str,
     config_path: str = "config.yaml",
 ) -> dict:
+    """
+    Process a single .docx file.
+    Returns dict with paths to generated files.
+    """
     try:
         file_name = os.path.basename(file_path)
         base_name = os.path.splitext(file_name)[0]
@@ -40,11 +44,14 @@ def process_single(
         # ---- INGESTION ----
         raw_text = WordDocumentIngester().ingest(file_path, ocr_images=ocr_images)
         if not raw_text.strip():
-            logging.warning(f"Empty document: {file_name}")
+            logging.warning(f"Empty document after ingestion: {file_name}")
             return {"json": None, "pdf": None, "llm": None}
 
         # ---- CLEANING ----
         cleaned_text = TextCleaner().clean(raw_text)
+        if not cleaned_text.strip():
+            logging.warning(f"Empty after cleaning: {file_name}")
+            return {"json": None, "pdf": None, "llm": None}
 
         # ---- CHUNKING ----
         chunker = TextChunker(chunk_size=chunk_size, overlap=overlap)
@@ -53,30 +60,38 @@ def process_single(
             logging.warning(f"No chunks generated: {file_name}")
             return {"json": None, "pdf": None, "llm": None}
 
-        # ---- TAGGING (per-worker instance) ----
-        from tagging import TextTagger  # Import inside worker
+        # ---- TAGGING (inside worker) ----
+        from tagging import TextTagger  # ← imported inside worker
         tagger = TextTagger(config_path=config_path)
         tagged_chunks = tagger.tag_chunks(chunks, file_name)
         if not tagged_chunks:
-            logging.warning(f"Tagging failed: {file_name}")
+            logging.warning(f"Tagging returned nothing: {file_name}")
             return {"json": None, "pdf": None, "llm": None}
 
-        # ---- OUTPUT ----
+        # ---- ENSURE policy_keywords exists (defense in depth) ----
+        for chunk in tagged_chunks:
+            if "policy_keywords" not in chunk:
+                chunk["policy_keywords"] = []
+
+        # ---- OUTPUT DIRECTORIES ----
         json_dir = os.path.join(output_dir, "json")
         pdf_dir  = os.path.join(output_dir, "pdf")
         llm_dir  = os.path.join(output_dir, "llm", export_format)
 
+        # ---- JSON (debug) ----
         os.makedirs(json_dir, exist_ok=True)
         json_file = os.path.join(json_dir, f"{base_name}.json")
         with open(json_file, "w", encoding="utf-8") as f:
             json.dump(tagged_chunks, f, indent=4, ensure_ascii=False)
 
+        # ---- PDF (optional) ----
         pdf_file = None
         if to_pdf:
             os.makedirs(pdf_dir, exist_ok=True)
             pdf_file = os.path.join(pdf_dir, f"{base_name}.pdf")
             PDFConverter().convert(json_file, pdf_file)
 
+        # ---- LLM EXPORT ----
         ext = "jsonl" if export_format in ("bedrock", "generic", "nova_pro", "claude_sonnet") else "json"
         llm_path = os.path.join(llm_dir, f"{base_name}.{ext}")
         os.makedirs(llm_dir, exist_ok=True)
@@ -105,22 +120,23 @@ def process_single(
 
 
 # ----------------------------------------------------------------------
-# 3. CLI
+# 3. CLI entry point
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Universal RAG Document Optimizer")
-    parser.add_argument("--input_dir", required=True)
-    parser.add_argument("--output_dir", default="output")
-    parser.add_argument("--chunk_size", type=int, default=500)
-    parser.add_argument("--overlap", type=int, default=100)
-    parser.add_argument("--ocr_images", action="store_true")
-    parser.add_argument("--to_pdf", action="store_true")
+    parser.add_argument("--input_dir", required=True, help="Directory with .docx files")
+    parser.add_argument("--output_dir", default="output", help="Root output directory")
+    parser.add_argument("--chunk_size", type=int, default=500, help="Words per chunk")
+    parser.add_argument("--overlap", type=int, default=100, help="Word overlap between chunks")
+    parser.add_argument("--ocr_images", action="store_true", help="Enable OCR on images")
+    parser.add_argument("--to_pdf", action="store_true", help="Generate PDF output")
     parser.add_argument(
         "--export-format",
         choices=["bedrock", "langchain", "llamaindex", "haystack", "generic", "nova_pro", "claude_sonnet"],
         default="bedrock",
+        help="Target LLM format"
     )
-    parser.add_argument("--workers", type=int, default=min(4, cpu_count()))
+    parser.add_argument("--workers", type=int, default=min(4, cpu_count()), help="Parallel workers")
 
     args = parser.parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
@@ -130,6 +146,7 @@ if __name__ == "__main__":
         print("No .docx files found.")
         exit(0)
 
+    # Build worker with shared args
     worker = partial(
         process_single,
         output_dir=args.output_dir,
@@ -138,12 +155,14 @@ if __name__ == "__main__":
         ocr_images=args.ocr_images,
         to_pdf=args.to_pdf,
         export_format=args.export_format,
-        config_path="config.yaml",  # ← passed to each worker
+        config_path="config.yaml",
     )
 
+    # Parallel execution
     with Pool(args.workers) as pool:
         results = pool.map(worker, docx_files)
 
+    # Combine JSONL corpora
     if args.export_format in ("bedrock", "generic", "nova_pro", "claude_sonnet"):
         combined_path = os.path.join(args.output_dir, f"{args.export_format}_corpus.jsonl")
         with open(combined_path, "w", encoding="utf-8") as out_f:
