@@ -17,7 +17,7 @@ import spacy
 _SPACY_NLP = spacy.load("en_core_web_lg", disable=["parser", "tagger", "lemmatizer"])
 
 from tagging import TextTagger
-_TEXT_TAGGER = TextTagger(nlp=_SPACY_NLP)   # ← inject pre-loaded model
+_TEXT_TAGGER = TextTagger(config_path="config.yaml")  # ← loads keywords
 
 # ----------------------------------------------------------------------
 # 2. Imports
@@ -53,7 +53,7 @@ def process_single(
         cleaned_text = TextCleaner().clean(raw_text)
         chunks = TextChunker(chunk_size=chunk_size, overlap=overlap).chunk(cleaned_text)
 
-        # Use global singleton – no multiprocessing inside
+        # Use global singleton tagger with config-loaded keywords
         tagged_chunks = _TEXT_TAGGER.tag_chunks(chunks, file_name)
 
         # Output dirs
