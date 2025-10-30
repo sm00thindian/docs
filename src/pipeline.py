@@ -7,20 +7,7 @@ from functools import partial
 from multiprocessing import Pool, cpu_count
 
 # ----------------------------------------------------------------------
-# 1. GLOBAL SINGLETONS – loaded *once* in the parent process
-# ----------------------------------------------------------------------
-import nltk
-nltk.download("punkt", quiet=True)
-nltk.download("stopwords", quiet=True)
-
-import spacy
-_SPACY_NLP = spacy.load("en_core_web_lg", disable=["parser", "tagger", "lemmatizer"])
-
-from tagging import TextTagger
-_TEXT_TAGGER = TextTagger(config_path="config.yaml")  # ← loads keywords
-
-# ----------------------------------------------------------------------
-# 2. Imports
+# 1. NO GLOBAL TAGGER — will be created in each worker
 # ----------------------------------------------------------------------
 from ingestion import WordDocumentIngester
 from cleaning import TextCleaner
@@ -34,7 +21,7 @@ from llm_export import (
 )
 
 # ----------------------------------------------------------------------
-# 3. Worker function
+# 2. Worker function — creates its own TextTagger
 # ----------------------------------------------------------------------
 def process_single(
     file_path: str,
@@ -44,19 +31,37 @@ def process_single(
     ocr_images: bool,
     to_pdf: bool,
     export_format: str,
+    config_path: str = "config.yaml",
 ) -> dict:
     try:
         file_name = os.path.basename(file_path)
         base_name = os.path.splitext(file_name)[0]
 
+        # ---- INGESTION ----
         raw_text = WordDocumentIngester().ingest(file_path, ocr_images=ocr_images)
+        if not raw_text.strip():
+            logging.warning(f"Empty document: {file_name}")
+            return {"json": None, "pdf": None, "llm": None}
+
+        # ---- CLEANING ----
         cleaned_text = TextCleaner().clean(raw_text)
-        chunks = TextChunker(chunk_size=chunk_size, overlap=overlap).chunk(cleaned_text)
 
-        # Use global singleton tagger with config-loaded keywords
-        tagged_chunks = _TEXT_TAGGER.tag_chunks(chunks, file_name)
+        # ---- CHUNKING ----
+        chunker = TextChunker(chunk_size=chunk_size, overlap=overlap)
+        chunks = chunker.chunk(cleaned_text)
+        if not chunks:
+            logging.warning(f"No chunks generated: {file_name}")
+            return {"json": None, "pdf": None, "llm": None}
 
-        # Output dirs
+        # ---- TAGGING (per-worker instance) ----
+        from tagging import TextTagger  # Import inside worker
+        tagger = TextTagger(config_path=config_path)
+        tagged_chunks = tagger.tag_chunks(chunks, file_name)
+        if not tagged_chunks:
+            logging.warning(f"Tagging failed: {file_name}")
+            return {"json": None, "pdf": None, "llm": None}
+
+        # ---- OUTPUT ----
         json_dir = os.path.join(output_dir, "json")
         pdf_dir  = os.path.join(output_dir, "pdf")
         llm_dir  = os.path.join(output_dir, "llm", export_format)
@@ -100,7 +105,7 @@ def process_single(
 
 
 # ----------------------------------------------------------------------
-# 4. CLI
+# 3. CLI
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Universal RAG Document Optimizer")
@@ -133,6 +138,7 @@ if __name__ == "__main__":
         ocr_images=args.ocr_images,
         to_pdf=args.to_pdf,
         export_format=args.export_format,
+        config_path="config.yaml",  # ← passed to each worker
     )
 
     with Pool(args.workers) as pool:
