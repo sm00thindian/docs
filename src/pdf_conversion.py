@@ -1,9 +1,11 @@
 # src/pdf_conversion.py
 import json
+import os
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
+
 
 class PDFConverter:
     def convert(self, json_file: str, pdf_file: str) -> None:
@@ -25,6 +27,12 @@ class PDFConverter:
         story.append(Paragraph(f"JSON Output: {os.path.basename(json_file)}", styles['Title']))
         story.append(Spacer(1, 12))
         for line in pretty_json.splitlines():
-            formatted_line = line.replace(' ', '&nbsp;')
+            # Escape HTML entities to prevent PDF rendering issues
+            formatted_line = (
+                line.replace('&', '&amp;')
+                    .replace('<', '&lt;')
+                    .replace('>', '&gt;')
+                    .replace(' ', '&nbsp;')
+            )
             story.append(Paragraph(formatted_line, json_style))
         doc.build(story)
