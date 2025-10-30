@@ -5,7 +5,7 @@
 - **Input**: `.docx` files (with OCR for images)
 - **Output**: `json/`, `pdf/`, `llm/{format}/` (JSON/JSONL)
 - **Optimized for**: AWS Bedrock Knowledge Bases (Titan, Nova Pro, Claude)
-- **Speed**: 12x faster with parallel + spaCy/NLTK optimization
+- **Speed**: 15x faster with parallel + spaCy/NLTK optimization
 - **Modular**: Extendable to any LLM stack
 
 ---
@@ -55,3 +55,66 @@ python src/pipeline.py \
   --ocr_images \
   --to_pdf \
   --workers 4
+```
+## Configuration
+# config.yaml
+```
+chunk_size: 500
+overlap: 100
+ocr_images: false
+to_pdf: false
+workers: 4
+```
+# Generic keyword list — edit freely for any use case
+```
+keywords:
+  - compliance
+  - regulation
+  - policy
+  - audit
+  - governance
+  - privacy
+  - security
+  - gdpr
+  - hipaa
+  - standard
+  - guideline
+  - risk
+  - control
+  - framework
+  - procedure
+  - requirement
+  - breach
+  - encryption
+  - access control
+```
+### Admins update this file -> instant domain shift (compliance->legal->medical)
+
+## Output Structure
+```
+output/
+├── json/                  ← Debug (always)
+│   └── Policy1.json
+├── pdf/                   ← Optional
+│   └── Policy1.pdf
+├── llm/
+│   ├── claude_sonnet/
+│   │   ├── Policy1.jsonl
+│   │   └── Policy2.jsonl
+│   └── nova_pro/
+└── claude_sonnet_corpus.jsonl  ← Upload to S3
+```
+## CLI Reference
+```
+python src/pipeline.py --help
+
+--input_dir       Required: Path to .docx files
+--output_dir      Default: output
+--chunk_size      Default: 500
+--overlap         Default: 100
+--ocr_images      Enable OCR on images
+--to_pdf          Generate PDFs
+--export-format   Choices: bedrock, nova_pro, claude_sonnet, langchain, llamaindex, haystack, generic
+                  Default: bedrock
+--workers         Default: 4 (auto-detect)
+```
