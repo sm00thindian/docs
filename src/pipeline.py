@@ -9,22 +9,18 @@ from multiprocessing import Pool, cpu_count
 # ----------------------------------------------------------------------
 # 1. GLOBAL SINGLETONS – loaded *once* in the parent process
 # ----------------------------------------------------------------------
-# NLTK data (quietly)
 import nltk
 nltk.download("punkt", quiet=True)
 nltk.download("stopwords", quiet=True)
 
-# spaCy model (NER-only, fast)
 import spacy
 _SPACY_NLP = spacy.load("en_core_web_lg", disable=["parser", "tagger", "lemmatizer"])
 
-# TextTagger now just re-uses the global model
 from tagging import TextTagger
-_TEXT_TAGGER = TextTagger()          # <-- creates the singleton
-_TEXT_TAGGER.nlp = _SPACY_NLP        # inject the pre-loaded model
+_TEXT_TAGGER = TextTagger(nlp=_SPACY_NLP)   # ← inject pre-loaded model
 
 # ----------------------------------------------------------------------
-# 2. Imports (the rest of the pipeline)
+# 2. Imports
 # ----------------------------------------------------------------------
 from ingestion import WordDocumentIngester
 from cleaning import TextCleaner
@@ -38,7 +34,7 @@ from llm_export import (
 )
 
 # ----------------------------------------------------------------------
-# 3. Worker function – **no** model loading inside!
+# 3. Worker function
 # ----------------------------------------------------------------------
 def process_single(
     file_path: str,
@@ -53,33 +49,29 @@ def process_single(
         file_name = os.path.basename(file_path)
         base_name = os.path.splitext(file_name)[0]
 
-        # ---- core pipeline (uses the *global* TextTagger) ----
         raw_text = WordDocumentIngester().ingest(file_path, ocr_images=ocr_images)
         cleaned_text = TextCleaner().clean(raw_text)
         chunks = TextChunker(chunk_size=chunk_size, overlap=overlap).chunk(cleaned_text)
 
-        # NOTE: _TEXT_TAGGER is the pre-initialised singleton
+        # Use global singleton – no multiprocessing inside
         tagged_chunks = _TEXT_TAGGER.tag_chunks(chunks, file_name)
 
-        # ---- output directories ------------------------------------------------
+        # Output dirs
         json_dir = os.path.join(output_dir, "json")
         pdf_dir  = os.path.join(output_dir, "pdf")
         llm_dir  = os.path.join(output_dir, "llm", export_format)
 
-        # JSON (debug)
         os.makedirs(json_dir, exist_ok=True)
         json_file = os.path.join(json_dir, f"{base_name}.json")
         with open(json_file, "w", encoding="utf-8") as f:
             json.dump(tagged_chunks, f, indent=4, ensure_ascii=False)
 
-        # PDF (optional)
         pdf_file = None
         if to_pdf:
             os.makedirs(pdf_dir, exist_ok=True)
             pdf_file = os.path.join(pdf_dir, f"{base_name}.pdf")
             PDFConverter().convert(json_file, pdf_file)
 
-        # LLM export
         ext = "jsonl" if export_format in ("bedrock", "generic", "nova_pro", "claude_sonnet") else "json"
         llm_path = os.path.join(llm_dir, f"{base_name}.{ext}")
         os.makedirs(llm_dir, exist_ok=True)
@@ -108,12 +100,10 @@ def process_single(
 
 
 # ----------------------------------------------------------------------
-# 4. CLI entry point
+# 4. CLI
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Universal RAG Document Optimizer"
-    )
+    parser = argparse.ArgumentParser(description="Universal RAG Document Optimizer")
     parser.add_argument("--input_dir", required=True)
     parser.add_argument("--output_dir", default="output")
     parser.add_argument("--chunk_size", type=int, default=500)
@@ -122,10 +112,7 @@ if __name__ == "__main__":
     parser.add_argument("--to_pdf", action="store_true")
     parser.add_argument(
         "--export-format",
-        choices=[
-            "bedrock", "langchain", "llamaindex", "haystack",
-            "generic", "nova_pro", "claude_sonnet"
-        ],
+        choices=["bedrock", "langchain", "llamaindex", "haystack", "generic", "nova_pro", "claude_sonnet"],
         default="bedrock",
     )
     parser.add_argument("--workers", type=int, default=min(4, cpu_count()))
@@ -151,7 +138,6 @@ if __name__ == "__main__":
     with Pool(args.workers) as pool:
         results = pool.map(worker, docx_files)
 
-    # ---- combine JSONL corpora (bedrock, generic, nova_pro, claude_sonnet) ----
     if args.export_format in ("bedrock", "generic", "nova_pro", "claude_sonnet"):
         combined_path = os.path.join(args.output_dir, f"{args.export_format}_corpus.jsonl")
         with open(combined_path, "w", encoding="utf-8") as out_f:
