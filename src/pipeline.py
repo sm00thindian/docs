@@ -8,7 +8,11 @@ from chunking import TextChunker
 from tagging import TextTagger
 from utils import get_files_with_extension
 from pdf_conversion import PDFConverter
-from bedrock_export import export_to_bedrock_jsonl
+from llm_export import (
+    export_langchain, export_llamaindex, export_haystack,
+    export_generic_jsonl, export_bedrock_jsonl,
+    export_nova_pro, export_claude_sonnet
+)
 from multiprocessing import Pool, cpu_count
 from functools import partial
 
@@ -16,67 +20,81 @@ from functools import partial
 def process_single(args):
     (
         file_path, output_dir, chunk_size, overlap,
-        ocr_images, to_pdf, to_bedrock
+        ocr_images, to_pdf, export_format
     ) = args
     try:
         file_name = os.path.basename(file_path)
         base_name = os.path.splitext(file_name)[0]
 
         # Core pipeline
-        ingester = WordDocumentIngester()
-        cleaner = TextCleaner()
-        chunker = TextChunker(chunk_size=chunk_size, overlap=overlap)
-        tagger = TextTagger()
+        raw_text = WordDocumentIngester().ingest(file_path, ocr_images=ocr_images)
+        cleaned_text = TextCleaner().clean(raw_text)
+        chunks = TextChunker(chunk_size=chunk_size, overlap=overlap).chunk(cleaned_text)
+        tagged_chunks = TextTagger().tag_chunks(chunks, file_name)
 
-        raw_text = ingester.ingest(file_path, ocr_images=ocr_images)
-        cleaned_text = cleaner.clean(raw_text)
-        chunks = chunker.chunk(cleaned_text)
-        tagged_chunks = tagger.tag_chunks(chunks, file_name)
-
-        # Define subdirs
+        # Subdirectories
         json_dir = os.path.join(output_dir, "json")
         pdf_dir = os.path.join(output_dir, "pdf")
-        bedrock_dir = os.path.join(output_dir, "bedrock")
-
-        # Always create json dir
+        llm_dir = os.path.join(output_dir, "llm", export_format)
         os.makedirs(json_dir, exist_ok=True)
+
+        # JSON (always)
         json_file = os.path.join(json_dir, f"{base_name}.json")
         with open(json_file, 'w', encoding='utf-8') as f:
             json.dump(tagged_chunks, f, indent=4, ensure_ascii=False)
 
-        # Optional: PDF
+        # PDF
+        pdf_file = None
         if to_pdf:
             os.makedirs(pdf_dir, exist_ok=True)
             pdf_file = os.path.join(pdf_dir, f"{base_name}.pdf")
             PDFConverter().convert(json_file, pdf_file)
 
-        # Optional: Bedrock JSONL
-        bedrock_file = None
-        if to_bedrock:
-            os.makedirs(bedrock_dir, exist_ok=True)
-            bedrock_file = os.path.join(bedrock_dir, f"{base_name}.jsonl")
-            export_to_bedrock_jsonl(tagged_chunks, bedrock_file, source_name=file_name)
+        # LLM Export
+        llm_file = None
+        ext = 'jsonl' if export_format in ['bedrock', 'generic', 'nova_pro', 'claude_sonnet'] else 'json'
+        llm_file = os.path.join(llm_dir, f"{base_name}.{ext}")
+        os.makedirs(llm_dir, exist_ok=True)
 
-        print(f"Done: {file_name}")
+        if export_format == "bedrock":
+            export_bedrock_jsonl(tagged_chunks, llm_file, source_name=file_name)
+        elif export_format == "langchain":
+            export_langchain(tagged_chunks, llm_file, source_name=file_name)
+        elif export_format == "llamaindex":
+            export_llamaindex(tagged_chunks, llm_file, source_name=file_name)
+        elif export_format == "haystack":
+            export_haystack(tagged_chunks, llm_file, source_name=file_name)
+        elif export_format == "generic":
+            export_generic_jsonl(tagged_chunks, llm_file, source_name=file_name)
+        elif export_format == "nova_pro":
+            export_nova_pro(tagged_chunks, llm_file, source_name=file_name)
+        elif export_format == "claude_sonnet":
+            export_claude_sonnet(tagged_chunks, llm_file, source_name=file_name)
+
+        print(f"Done: {file_name} ({export_format})")
         return {
             "json": json_file,
-            "pdf": pdf_file if to_pdf else None,
-            "bedrock": bedrock_file
+            "pdf": pdf_file,
+            "llm": llm_file
         }
     except Exception as e:
         print(f"Failed {file_path}: {e}")
-        return {"json": None, "pdf": None, "bedrock": None}
+        return {"json": None, "pdf": None, "llm": None}
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="AWS Bedrock RAG Document Optimizer")
-    parser.add_argument("--input_dir", required=True, help="Input .docx directory")
-    parser.add_argument("--output_dir", default="output", help="Root output directory")
+    parser = argparse.ArgumentParser(description="Universal RAG Document Optimizer")
+    parser.add_argument("--input_dir", required=True)
+    parser.add_argument("--output_dir", default="output")
     parser.add_argument("--chunk_size", type=int, default=500)
     parser.add_argument("--overlap", type=int, default=100)
     parser.add_argument("--ocr_images", action="store_true")
-    parser.add_argument("--to_pdf", action="store_true", help="Generate PDFs")
-    parser.add_argument("--to_bedrock", action="store_true", help="Generate Bedrock JSONL")
+    parser.add_argument("--to_pdf", action="store_true")
+    parser.add_argument(
+        "--export-format",
+        choices=["bedrock", "langchain", "llamaindex", "haystack", "generic", "nova_pro", "claude_sonnet"],
+        default="bedrock"
+    )
     parser.add_argument("--workers", type=int, default=min(4, cpu_count()))
 
     args = parser.parse_args()
@@ -94,20 +112,20 @@ if __name__ == "__main__":
         overlap=args.overlap,
         ocr_images=args.ocr_images,
         to_pdf=args.to_pdf,
-        to_bedrock=args.to_bedrock
+        export_format=args.export_format
     )
 
     with Pool(args.workers) as pool:
         results = pool.map(process_func, docx_files)
 
-    # Combine Bedrock JSONL if enabled
-    if args.to_bedrock:
-        combined_file = os.path.join(args.output_dir, "bedrock_corpus.jsonl")
+    # Combine LLM corpus if JSONL format
+    if args.export_format in ['bedrock', 'generic', 'nova_pro', 'claude_sonnet']:
+        combined_file = os.path.join(args.output_dir, f"{args.export_format}_corpus.jsonl")
         with open(combined_file, 'w', encoding='utf-8') as outfile:
             for res in results:
-                if res["bedrock"]:
-                    with open(res["bedrock"], 'r', encoding='utf-8') as infile:
+                if res["llm"]:
+                    with open(res["llm"], 'r', encoding='utf-8') as infile:
                         outfile.write(infile.read())
-        print(f"Combined Bedrock corpus: {combined_file}")
+        print(f"Combined {args.export_format} corpus: {combined_file}")
 
     print(f"Processed {len(docx_files)} files → {args.output_dir}")
