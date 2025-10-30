@@ -67,7 +67,7 @@ class TextTagger:
                 'content': chunk,
                 'word_count': len(words),
                 'keywords': top_keywords,
-                'matched_keywords': list(set(matched_keywords)),  # ← from config
+                'policy_keywords': list(set(matched_keywords)),  # ← RENAMED
                 'entities': entities,
                 'intents': intents or ['general'],
                 'chunk_position': i / total_chunks if total_chunks > 0 else 0.0,
