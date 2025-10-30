@@ -1,10 +1,13 @@
 # src/llm_export.py
 import json
 import os
-from typing import List, Dict, Any
+from typing import List, Dict
 from datetime import datetime
 
 
+# ----------------------------------------------------------------------
+#  Existing exporters (unchanged – kept for completeness)
+# ----------------------------------------------------------------------
 def export_langchain(
     tagged_chunks: List[Dict],
     output_file: str,
@@ -19,7 +22,8 @@ def export_langchain(
                 "chunk_id": chunk["chunk_id"],
                 "file_name": chunk["file_name"],
                 "chunk_position": chunk["chunk_position"],
-                **{k: v for k, v in chunk.items() if k not in ["content", "chunk_id", "file_name", "chunk_position"]}
+                **{k: v for k, v in chunk.items()
+                   if k not in ["content", "chunk_id", "file_name", "chunk_position"]}
             }
         }
         for chunk in tagged_chunks
@@ -86,7 +90,7 @@ def export_generic_jsonl(
     output_file: str,
     source_name: str
 ) -> str:
-    """Simple: Flat JSONL"""
+    """Simple flat JSONL"""
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     with open(output_file, 'w', encoding='utf-8') as f:
         for chunk in tagged_chunks:
@@ -108,11 +112,11 @@ def export_bedrock_jsonl(
     output_file: str,
     source_name: str
 ) -> str:
-    """Bedrock Base: JSONL for Knowledge Bases"""
+    """Standard Bedrock JSONL"""
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     with open(output_file, 'w', encoding='utf-8') as f:
         for chunk in tagged_chunks:
-            bedrock_entry = {
+            entry = {
                 "text": chunk["content"],
                 "metadata": {
                     "source": source_name,
@@ -127,24 +131,30 @@ def export_bedrock_jsonl(
                     "ingestion_timestamp": datetime.utcnow().isoformat() + "Z"
                 }
             }
-            # Clean empty fields
-            bedrock_entry["metadata"] = {
-                k: v for k, v in bedrock_entry["metadata"].items()
+            entry["metadata"] = {
+                k: v for k, v in entry["metadata"].items()
                 if v not in ([], {}, None, "")
             }
-            f.write(json.dumps(bedrock_entry, ensure_ascii=False) + "\n")
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     return output_file
 
 
+# ----------------------------------------------------------------------
+#  Fixed exporters (Nova Pro & Claude Sonnet)
+# ----------------------------------------------------------------------
 def export_nova_pro(
     tagged_chunks: List[Dict],
     output_file: str,
     source_name: str
 ) -> str:
-    """Nova Pro: Bedrock JSONL + Multimodal Fields"""
+    """Nova Pro – adds multimodal fields"""
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     with open(output_file, 'w', encoding='utf-8') as f:
         for chunk in tagged_chunks:
+            # ---- compute multimodal_type before the dict ----
+            has_image = "[Image" in chunk["content"]
+            multimodal_type = "text/image" if has_image else "text"
+
             entry = {
                 "text": chunk["content"],
                 "metadata": {
@@ -158,13 +168,15 @@ def export_nova_pro(
                     "intents": chunk["intents"],
                     "entities": chunk["entities"],
                     "ingestion_timestamp": datetime.utcnow().isoformat() + "Z",
-                    # Nova Pro Custom: Multimodal support
-                    "multimodal_type": "text" if not any("[Image" in chunk["content"] else False for _ in [1]) else "text/image",
-                    "content_modality": "structured"  # For policy docs
+                    # Nova Pro custom fields
+                    "multimodal_type": multimodal_type,
+                    "content_modality": "structured"
                 }
             }
+            # prune empty values
             entry["metadata"] = {
-                k: v for k, v in entry["metadata"].items() if v not in ([], {}, None, "")
+                k: v for k, v in entry["metadata"].items()
+                if v not in ([], {}, None, "")
             }
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     return output_file
@@ -175,10 +187,15 @@ def export_claude_sonnet(
     output_file: str,
     source_name: str
 ) -> str:
-    """Claude Sonnet: Bedrock JSONL + Reasoning Fields"""
+    """Claude Sonnet – adds reasoning hints"""
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     with open(output_file, 'w', encoding='utf-8') as f:
         for chunk in tagged_chunks:
+            # ---- compute reasoning hint before the dict ----
+            reasoning_hint = (
+                ["multi-step"] if "procedure" in chunk["intents"] else ["contextual"]
+            )
+
             entry = {
                 "text": chunk["content"],
                 "metadata": {
@@ -192,13 +209,14 @@ def export_claude_sonnet(
                     "intents": chunk["intents"],
                     "entities": chunk["entities"],
                     "ingestion_timestamp": datetime.utcnow().isoformat() + "Z",
-                    # Claude Sonnet Custom: Reasoning support
-                    "reasoning_hints": ["multi-step"] if "procedure" in chunk["intents"] else ["contextual"],
+                    # Claude Sonnet custom fields
+                    "reasoning_hints": reasoning_hint,
                     "contextual_tags": [e[0] for e in chunk["entities"]] + chunk["policy_keywords"]
                 }
             }
             entry["metadata"] = {
-                k: v for k, v in entry["metadata"].items() if v not in ([], {}, None, "")
+                k: v for k, v in entry["metadata"].items()
+                if v not in ([], {}, None, "")
             }
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     return output_file
