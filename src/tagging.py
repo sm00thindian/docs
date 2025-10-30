@@ -5,23 +5,17 @@ import logging
 from typing import List, Dict
 from nltk.corpus import stopwords
 from collections import Counter
+from multiprocessing import Pool, cpu_count
+from functools import partial
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
+logging.basicConfig(level=logging.INFO)
 
 class TextTagger:
-    """Handles tagging chunks with metadata, keywords, entities, and intents."""
-    
     def __init__(self):
-        """Initialize NLTK and spaCy, load stopwords and policy-specific keywords."""
         nltk.download('punkt', quiet=True)
         nltk.download('stopwords', quiet=True)
-        try:
-            self.nlp = spacy.load('en_core_web_lg', disable=['parser'])
-        except Exception as e:
-            logging.error(f"Failed to load spaCy model: {e}")
-            raise
+        # Lean spaCy: only NER
+        self.nlp = spacy.load('en_core_web_lg', disable=['parser', 'tagger', 'lemmatizer'])
         self.stop_words = set(stopwords.words('english'))
         self.POLICY_KEYWORDS = {
             'compliance', 'regulation', 'policy', 'audit', 'governance', 'privacy',
@@ -32,54 +26,49 @@ class TextTagger:
             'definition': ['defined as', 'means', 'refers to'],
             'procedure': ['step', 'process', 'procedure']
         }
-        logging.info("TextTagger initialized with spaCy and NLTK.")
-    
-    def tag_chunks(self, chunks: List[str], file_name: str) -> List[Dict]:
-        """Tag each chunk with metadata, keywords, entities, policy keywords, and intents."""
-        try:
-            tagged_chunks = []
-            docs = list(self.nlp.pipe(chunks, batch_size=32))  # Optimized batching
+        logging.info("TextTagger initialized (NER-only spaCy)")
 
-            total_chunks = len(chunks)
-            for i, (chunk, doc) in enumerate(zip(chunks, docs)):
-                try:
-                    words = nltk.word_tokenize(chunk.lower())
-                    filtered_words = [w for w in words if w.isalnum() and w not in self.stop_words]
-                    keywords = [word for word, _ in Counter(filtered_words).most_common(5)]
-                    
-                    policy_keywords = [word for word in words if word.lower() in self.POLICY_KEYWORDS]
-                    
-                    entities = [(ent.text, ent.label_) for ent in doc.ents]
-                    
-                    chunk_lower = chunk.lower()
-                    intents = [
-                        intent for intent, markers in self.INTENT_PATTERNS.items()
-                        if any(marker in chunk_lower for marker in markers)
-                    ]
-                    
-                    tagged = {
-                        'chunk_id': i,
-                        'file_name': file_name,
-                        'content': chunk,
-                        'word_count': len(words),
-                        'keywords': keywords,
-                        'entities': entities,
-                        'policy_keywords': list(set(policy_keywords)),
-                        'intents': intents if intents else ['general'],
-                        'chunk_position': i / total_chunks if total_chunks > 0 else 0.0,
-                    }
-                    tagged_chunks.append(tagged)
-                except Exception as e:
-                    logging.error(f"Error tagging chunk {i} in {file_name}: {e}")
-                    tagged_chunks.append({
-                        'chunk_id': i,
-                        'file_name': file_name,
-                        'content': chunk,
-                        'error': str(e)
-                    })
-            
-            logging.info(f"Tagged {len(tagged_chunks)} chunks for {file_name}")
-            return tagged_chunks
+    def _tag_single(self, args):
+        i, chunk, file_name, total_chunks = args
+        try:
+            words = nltk.word_tokenize(chunk.lower())
+            filtered_words = [w for w in words if w.isalnum() and w not in self.stop_words]
+            keywords = [word for word, _ in Counter(filtered_words).most_common(5)]
+            policy_keywords = [w for w in words if w.lower() in self.POLICY_KEYWORDS]
+            doc = self.nlp(chunk)
+            entities = [(ent.text, ent.label_) for ent in doc.ents]
+            chunk_lower = chunk.lower()
+            intents = [
+                intent for intent, markers in self.INTENT_PATTERNS.items()
+                if any(marker in chunk_lower for marker in markers)
+            ]
+            return {
+                'chunk_id': i,
+                'file_name': file_name,
+                'content': chunk,
+                'word_count': len(words),
+                'keywords': keywords,
+                'entities': entities,
+                'policy_keywords': list(set(policy_keywords)),
+                'intents': intents or ['general'],
+                'chunk_position': i / total_chunks if total_chunks > 0 else 0.0,
+            }
         except Exception as e:
-            logging.error(f"Failed to tag chunks for {file_name}: {e}")
-            raise
+            logging.error(f"Error tagging chunk {i}: {e}")
+            return {
+                'chunk_id': i, 'file_name': file_name, 'content': chunk, 'error': str(e)
+            }
+
+    def tag_chunks(self, chunks: List[str], file_name: str) -> List[Dict]:
+        total_chunks = len(chunks)
+        if total_chunks == 0:
+            return []
+
+        # Parallel tagging
+        num_workers = min(cpu_count(), 4)  # Cap to avoid overload
+        with Pool(num_workers) as pool:
+            tag_func = partial(self._tag_single, file_name=file_name, total_chunks=total_chunks)
+            tagged_chunks = pool.map(tag_func, enumerate(chunks))
+
+        logging.info(f"Tagged {len(tagged_chunks)} chunks for {file_name}")
+        return tagged_chunks
