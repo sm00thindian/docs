@@ -5,17 +5,17 @@ import logging
 from typing import List, Dict
 from nltk.corpus import stopwords
 from collections import Counter
-from multiprocessing import Pool, cpu_count
-from functools import partial
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class TextTagger:
-    def __init__(self):
+    """Handles tagging chunks with metadata, keywords, entities, and intents."""
+    
+    def __init__(self, nlp=None):
+        """Accept pre-loaded spaCy model to avoid loading in workers."""
         nltk.download('punkt', quiet=True)
         nltk.download('stopwords', quiet=True)
-        # Lean spaCy: only NER
-        self.nlp = spacy.load('en_core_web_lg', disable=['parser', 'tagger', 'lemmatizer'])
+        self.nlp = nlp or spacy.load('en_core_web_lg', disable=['parser', 'tagger', 'lemmatizer'])
         self.stop_words = set(stopwords.words('english'))
         self.POLICY_KEYWORDS = {
             'compliance', 'regulation', 'policy', 'audit', 'governance', 'privacy',
@@ -28,8 +28,7 @@ class TextTagger:
         }
         logging.info("TextTagger initialized (NER-only spaCy)")
 
-    def _tag_single(self, args):
-        i, chunk, file_name, total_chunks = args
+    def _tag_single(self, i: int, chunk: str, file_name: str, total_chunks: int) -> Dict:
         try:
             words = nltk.word_tokenize(chunk.lower())
             filtered_words = [w for w in words if w.isalnum() and w not in self.stop_words]
@@ -60,15 +59,10 @@ class TextTagger:
             }
 
     def tag_chunks(self, chunks: List[str], file_name: str) -> List[Dict]:
+        """Sequential tagging – safe inside daemon workers."""
         total_chunks = len(chunks)
         if total_chunks == 0:
             return []
-
-        # Parallel tagging
-        num_workers = min(cpu_count(), 4)  # Cap to avoid overload
-        with Pool(num_workers) as pool:
-            tag_func = partial(self._tag_single, file_name=file_name, total_chunks=total_chunks)
-            tagged_chunks = pool.map(tag_func, enumerate(chunks))
-
-        logging.info(f"Tagged {len(tagged_chunks)} chunks for {file_name}")
-        return tagged_chunks
+        tagged = [self._tag_single(i, chunk, file_name, total_chunks) for i, chunk in enumerate(chunks)]
+        logging.info(f"Tagged {len(tagged)} chunks for {file_name}")
+        return tagged
