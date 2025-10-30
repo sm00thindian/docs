@@ -1,0 +1,34 @@
+# config.yaml
+# ──────────────────────────────────────────────────────────────
+# Core pipeline settings
+chunk_size: 500
+overlap: 100
+ocr_images: false
+to_pdf: false
+workers: 4
+
+# ──────────────────────────────────────────────────────────────
+# Generic keyword list — edit freely for any use case
+# Default: compliance/policy domain
+keywords:
+  - compliance
+  - regulation
+  - policy
+  - audit
+  - governance
+  - privacy
+  - security
+  - data protection
+  - gdpr
+  - hipaa
+  - standard
+  - safr
+  - guideline
+  - risk
+  - control
+  - framework
+  - procedure
+  - requirement
+  - breach
+  - encryption
+  - access control
