@@ -9,6 +9,7 @@ from collections import Counter
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+
 class TextTagger:
     """Handles tagging chunks with metadata, keywords, entities, and intents."""
     
@@ -17,7 +18,7 @@ class TextTagger:
         nltk.download('punkt', quiet=True)
         nltk.download('stopwords', quiet=True)
         try:
-            self.nlp = spacy.load('en_core_web_lg', disable=['parser'])  # Disable parser for speed
+            self.nlp = spacy.load('en_core_web_lg', disable=['parser'])
         except Exception as e:
             logging.error(f"Failed to load spaCy model: {e}")
             raise
@@ -37,28 +38,25 @@ class TextTagger:
         """Tag each chunk with metadata, keywords, entities, policy keywords, and intents."""
         try:
             tagged_chunks = []
-            # Batch process chunks with spaCy for efficiency
-            docs = list(self.nlp.pipe(chunks))
-            
+            docs = list(self.nlp.pipe(chunks, batch_size=32))  # Optimized batching
+
+            total_chunks = len(chunks)
             for i, (chunk, doc) in enumerate(zip(chunks, docs)):
                 try:
-                    # Tokenize and extract keywords with NLTK
                     words = nltk.word_tokenize(chunk.lower())
                     filtered_words = [w for w in words if w.isalnum() and w not in self.stop_words]
                     keywords = [word for word, _ in Counter(filtered_words).most_common(5)]
                     
-                    # Extract policy-specific keywords
                     policy_keywords = [word for word in words if word.lower() in self.POLICY_KEYWORDS]
                     
-                    # Extract named entities with spaCy
                     entities = [(ent.text, ent.label_) for ent in doc.ents]
                     
-                    # Determine chunk intent based on patterns
                     chunk_lower = chunk.lower()
-                    intents = [intent for intent, markers in self.INTENT_PATTERNS.items()
-                              if any(marker in chunk_lower for marker in markers)]
+                    intents = [
+                        intent for intent, markers in self.INTENT_PATTERNS.items()
+                        if any(marker in chunk_lower for marker in markers)
+                    ]
                     
-                    # Create tagged chunk
                     tagged = {
                         'chunk_id': i,
                         'file_name': file_name,
@@ -66,9 +64,9 @@ class TextTagger:
                         'word_count': len(words),
                         'keywords': keywords,
                         'entities': entities,
-                        'policy_keywords': list(set(policy_keywords)),  # Deduplicate
+                        'policy_keywords': list(set(policy_keywords)),
                         'intents': intents if intents else ['general'],
-                        'chunk_position': i / len(chunks) if chunks else 0.0,  # Normalized position (0 to 1)
+                        'chunk_position': i / total_chunks if total_chunks > 0 else 0.0,
                     }
                     tagged_chunks.append(tagged)
                 except Exception as e:
