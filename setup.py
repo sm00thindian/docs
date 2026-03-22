@@ -1,4 +1,10 @@
-# setup.py (optional, for pip install -e .)
+"""
+Setup configuration for the project.
+
+This script contains information about the packages required,
+versioning, and metadata for the package.
+"""
+
 from setuptools import setup, find_packages
 
 setup(
